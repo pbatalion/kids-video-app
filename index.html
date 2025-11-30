@@ -660,9 +660,11 @@
             videos.forEach(video => {
                 const channelName = video.channelName || 'My Videos';
                 if (!channelMap.has(channelName)) {
+                    // Use channel thumbnail if available, otherwise use first video thumbnail
+                    const thumbnail = video.channelThumbnail || `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`;
                     channelMap.set(channelName, {
                         name: channelName,
-                        thumbnail: video.channelThumbnail || 'https://via.placeholder.com/400x400/667eea/ffffff?text=' + encodeURIComponent(channelName.substring(0, 2)),
+                        thumbnail: thumbnail,
                         videos: []
                     });
                 }
@@ -681,7 +683,10 @@
 
             grid.innerHTML = Array.from(channelMap.values()).map(channel => `
                 <div class="channel-card" onclick="showChannelVideos('${escapeHtml(channel.name)}')">
-                    <img src="${channel.thumbnail}" alt="${escapeHtml(channel.name)}" class="channel-thumbnail">
+                    <img src="${channel.thumbnail}"
+                         alt="${escapeHtml(channel.name)}"
+                         class="channel-thumbnail"
+                         onerror="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.alt='${escapeHtml(channel.name).substring(0,2)}'; this.src='';">
                     <div class="channel-info">
                         <div class="channel-name">${escapeHtml(channel.name)}</div>
                         <div class="video-count">${channel.videos.length} video${channel.videos.length !== 1 ? 's' : ''}</div>
