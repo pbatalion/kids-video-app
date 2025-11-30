@@ -59,31 +59,51 @@
             transform: scale(1.1);
         }
 
-        .channels-nav {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            justify-content: center;
+        .channel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
         }
 
-        .channel-filter {
-            padding: 10px 20px;
+        .channel-card {
             background: white;
-            border: none;
-            border-radius: 25px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-decoration: none;
+            color: inherit;
         }
 
-        .channel-filter:hover,
-        .channel-filter.active {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        .channel-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .channel-thumbnail {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            background: #f5f5f5;
+        }
+
+        .channel-info {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .channel-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .video-count {
+            color: #666;
+            font-size: 0.95em;
         }
 
         .video-grid {
@@ -91,6 +111,32 @@
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 25px;
             margin-bottom: 30px;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .view-channels {
+            display: block;
+        }
+
+        .view-videos {
+            display: none;
         }
 
         .video-card {
@@ -433,12 +479,18 @@
             </div>
         </div>
 
-        <!-- Channel Filters -->
-        <div class="channels-nav" id="channelsNav"></div>
+        <!-- Channels View -->
+        <div id="channelsView" class="view-channels">
+            <div id="messageContainer"></div>
+            <div class="channel-grid" id="channelGrid"></div>
+        </div>
 
-        <!-- Video Grid -->
-        <div id="messageContainer"></div>
-        <div class="video-grid" id="videoGrid"></div>
+        <!-- Videos View -->
+        <div id="videosView" class="view-videos">
+            <a href="#" class="back-button" onclick="showChannels(); return false;">← Back to Channels</a>
+            <h2 id="currentChannelName" style="color: white; text-align: center; margin-bottom: 20px;"></h2>
+            <div class="video-grid" id="videoGrid"></div>
+        </div>
     </div>
 
     <!-- Math Challenge Modal -->
@@ -515,9 +567,22 @@
         // Initialize
         window.onload = function() {
             loadVideos();
-            renderVideos();
-            renderChannelFilters();
+            showChannels();
         };
+
+        function showChannels() {
+            document.getElementById('channelsView').style.display = 'block';
+            document.getElementById('videosView').style.display = 'none';
+            renderChannels();
+        }
+
+        function showChannelVideos(channelName) {
+            currentFilter = channelName;
+            document.getElementById('channelsView').style.display = 'none';
+            document.getElementById('videosView').style.display = 'block';
+            document.getElementById('currentChannelName').textContent = channelName;
+            renderVideos();
+        }
 
         // Math Challenge
         function showMathChallenge() {
@@ -587,21 +652,47 @@
         }
 
 
-        function renderVideos() {
-            const grid = document.getElementById('videoGrid');
-            const filteredVideos = currentFilter === 'all'
-                ? videos
-                : videos.filter(v => v.channelName === currentFilter);
+        function renderChannels() {
+            const grid = document.getElementById('channelGrid');
 
-            if (filteredVideos.length === 0) {
+            // Group videos by channel
+            const channelMap = new Map();
+            videos.forEach(video => {
+                const channelName = video.channelName || 'My Videos';
+                if (!channelMap.has(channelName)) {
+                    channelMap.set(channelName, {
+                        name: channelName,
+                        thumbnail: video.channelThumbnail || 'https://via.placeholder.com/400x400/667eea/ffffff?text=' + encodeURIComponent(channelName.substring(0, 2)),
+                        videos: []
+                    });
+                }
+                channelMap.get(channelName).videos.push(video);
+            });
+
+            if (channelMap.size === 0) {
                 grid.innerHTML = `
                     <div class="empty-state">
-                        <h2>No videos yet!</h2>
-                        <p>Click the ⚙️ button to add videos</p>
+                        <h2>No channels yet!</h2>
+                        <p>Click the ⚙️ button to import channels</p>
                     </div>
                 `;
                 return;
             }
+
+            grid.innerHTML = Array.from(channelMap.values()).map(channel => `
+                <div class="channel-card" onclick="showChannelVideos('${escapeHtml(channel.name)}')">
+                    <img src="${channel.thumbnail}" alt="${escapeHtml(channel.name)}" class="channel-thumbnail">
+                    <div class="channel-info">
+                        <div class="channel-name">${escapeHtml(channel.name)}</div>
+                        <div class="video-count">${channel.videos.length} video${channel.videos.length !== 1 ? 's' : ''}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderVideos() {
+            const grid = document.getElementById('videoGrid');
+            const filteredVideos = videos.filter(v => (v.channelName || 'My Videos') === currentFilter);
 
             grid.innerHTML = filteredVideos.map((video, index) => `
                 <div class="video-card">
@@ -618,34 +709,9 @@
                     </div>
                     <div class="video-info">
                         <div class="video-title">${escapeHtml(video.title)}</div>
-                        <div class="video-channel">${escapeHtml(video.channelName || 'Uncategorized')}</div>
                     </div>
                 </div>
             `).join('');
-        }
-
-        function renderChannelFilters() {
-            const channels = ['all', ...new Set(videos.map(v => v.channelName).filter(Boolean))];
-            const nav = document.getElementById('channelsNav');
-
-            if (channels.length <= 1) {
-                nav.innerHTML = '';
-                return;
-            }
-
-            nav.innerHTML = channels.map(channel => `
-                <button
-                    class="channel-filter ${currentFilter === channel ? 'active' : ''}"
-                    onclick="filterByChannel('${channel}')">
-                    ${channel === 'all' ? '📺 All Videos' : escapeHtml(channel)}
-                </button>
-            `).join('');
-        }
-
-        function filterByChannel(channel) {
-            currentFilter = channel;
-            renderVideos();
-            renderChannelFilters();
         }
 
         function deleteVideo(videoId) {
@@ -653,8 +719,15 @@
 
             videos = videos.filter(v => v.id !== videoId);
             saveVideos();
-            renderVideos();
-            renderChannelFilters();
+
+            // Check if we should go back to channels view
+            const channelVideos = videos.filter(v => (v.channelName || 'My Videos') === currentFilter);
+            if (channelVideos.length === 0) {
+                showChannels();
+            } else {
+                renderVideos();
+            }
+
             showMessage('Video deleted', 'success');
         }
 
@@ -682,8 +755,7 @@
             });
 
             saveVideos();
-            renderVideos();
-            renderChannelFilters();
+            showChannels();
             closeModal('addVideoModal');
             showMessage('Video added successfully! 🎉', 'success');
 
@@ -745,8 +817,7 @@
                 });
 
                 saveVideos();
-                renderVideos();
-                renderChannelFilters();
+                showChannels();
                 closeModal('importChannelModal');
                 showMessage(`Successfully imported ${addedCount} videos from ${channelName}! 🎉`, 'success');
 
@@ -795,8 +866,7 @@
                     });
 
                     saveVideos();
-                    renderVideos();
-                    renderChannelFilters();
+                    showChannels();
                     showMessage(`Successfully imported ${importedVideos.length} videos! 🎉`, 'success');
 
                 } catch (error) {
