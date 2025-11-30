@@ -128,33 +128,9 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            right: 0;
+            height: 70px;
             z-index: 1;
-            pointer-events: none;
-        }
-
-        /* Block clicks on top area (YouTube logo/title) */
-        .video-overlay::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            background: transparent;
-            pointer-events: auto;
-        }
-
-        /* Block clicks on bottom-right corner (Watch on YouTube link) */
-        .video-overlay::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 120px;
-            height: 50px;
-            background: transparent;
             pointer-events: auto;
         }
 
