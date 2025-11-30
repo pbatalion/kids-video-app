@@ -128,9 +128,33 @@
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Block clicks on top area (YouTube logo and title) */
+        .video-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
             right: 0;
             height: 70px;
-            z-index: 1;
+            background: transparent;
+            pointer-events: auto;
+        }
+
+        /* Block "Watch on YouTube" button (bottom right, but not fullscreen) */
+        .video-overlay::after {
+            content: '';
+            position: absolute;
+            bottom: 42px;
+            right: 52px;
+            width: 140px;
+            height: 36px;
+            background: transparent;
             pointer-events: auto;
         }
 
