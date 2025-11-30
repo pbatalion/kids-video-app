@@ -109,6 +109,47 @@
             font-size: 0.85em;
         }
 
+        .channel-actions {
+            display: none;
+            padding: 10px 15px;
+            gap: 8px;
+            background: #f8f8f8;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .admin-mode .channel-actions {
+            display: flex;
+        }
+
+        .channel-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .channel-btn-reimport {
+            background: #667eea;
+            color: white;
+        }
+
+        .channel-btn-reimport:hover {
+            background: #5568d3;
+        }
+
+        .channel-btn-delete {
+            background: #ff3b30;
+            color: white;
+        }
+
+        .channel-btn-delete:hover {
+            background: #e62e24;
+        }
+
         .video-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -665,12 +706,16 @@
                 if (!channelMap.has(channelName)) {
                     channelMap.set(channelName, {
                         name: channelName,
+                        channelId: video.channelId,
                         thumbnail: video.channelThumbnail || `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`,
                         videos: []
                     });
                 } else if (video.channelThumbnail && !channelMap.get(channelName).thumbnail.includes('yt3.ggpht.com')) {
                     // Update to use actual channel thumbnail if we find one
                     channelMap.get(channelName).thumbnail = video.channelThumbnail;
+                }
+                if (video.channelId && !channelMap.get(channelName).channelId) {
+                    channelMap.get(channelName).channelId = video.channelId;
                 }
                 channelMap.get(channelName).videos.push(video);
             });
@@ -686,14 +731,20 @@
             }
 
             grid.innerHTML = Array.from(channelMap.values()).map(channel => `
-                <div class="channel-card" onclick="showChannelVideos('${escapeHtml(channel.name)}')">
-                    <img src="${channel.thumbnail}"
-                         alt="${escapeHtml(channel.name)}"
-                         class="channel-thumbnail"
-                         onerror="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.alt='${escapeHtml(channel.name).substring(0,2)}'; this.src='';">
-                    <div class="channel-info">
-                        <div class="channel-name">${escapeHtml(channel.name)}</div>
-                        <div class="video-count">${channel.videos.length} video${channel.videos.length !== 1 ? 's' : ''}</div>
+                <div class="channel-card">
+                    <div onclick="showChannelVideos('${escapeHtml(channel.name)}')">
+                        <img src="${channel.thumbnail}"
+                             alt="${escapeHtml(channel.name)}"
+                             class="channel-thumbnail"
+                             onerror="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.alt='${escapeHtml(channel.name).substring(0,2)}'; this.src='';">
+                        <div class="channel-info">
+                            <div class="channel-name">${escapeHtml(channel.name)}</div>
+                            <div class="video-count">${channel.videos.length} video${channel.videos.length !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                    <div class="channel-actions">
+                        ${channel.channelId ? `<button class="channel-btn channel-btn-reimport" onclick="event.stopPropagation(); reimportChannel('${channel.channelId}', '${escapeHtml(channel.name)}')">🔄 Refresh</button>` : ''}
+                        <button class="channel-btn channel-btn-delete" onclick="event.stopPropagation(); deleteChannel('${escapeHtml(channel.name)}')">🗑️ Delete</button>
                     </div>
                 </div>
             `).join('');
@@ -825,6 +876,7 @@
                         id: videoId,
                         title: item.snippet.title,
                         channelName: channelName,
+                        channelId: channelId,
                         channelThumbnail: channelThumbnail,
                         addedAt: new Date().toISOString()
                     });
@@ -839,6 +891,83 @@
             } catch (error) {
                 console.error('Import error:', error);
                 messageEl.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function deleteChannel(channelName) {
+            const channelVideos = videos.filter(v => (v.channelName || 'My Videos') === channelName);
+
+            if (!confirm(`Delete "${channelName}" and all ${channelVideos.length} videos?`)) {
+                return;
+            }
+
+            videos = videos.filter(v => (v.channelName || 'My Videos') !== channelName);
+            saveVideos();
+            renderChannels();
+            showMessage(`Deleted ${channelName} and ${channelVideos.length} videos`, 'success');
+        }
+
+        async function reimportChannel(channelId, channelName) {
+            if (!confirm(`Refresh videos from "${channelName}"? This will fetch the latest videos and replace existing ones.`)) {
+                return;
+            }
+
+            showMessage('Refreshing channel...', 'success');
+
+            try {
+                // Get channel info
+                const channelResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&id=${channelId}&key=${YOUTUBE_API_KEY}`
+                );
+                const channelData = await channelResponse.json();
+
+                if (!channelData.items || channelData.items.length === 0) {
+                    throw new Error('Channel not found');
+                }
+
+                const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
+
+                // Get videos from uploads playlist
+                const videosResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${YOUTUBE_API_KEY}`
+                );
+                const videosData = await videosResponse.json();
+
+                if (!videosData.items) {
+                    throw new Error('No videos found');
+                }
+
+                // Get channel thumbnail
+                const channelThumbnail = channelData.items[0].snippet.thumbnails.high?.url ||
+                                        channelData.items[0].snippet.thumbnails.medium?.url ||
+                                        channelData.items[0].snippet.thumbnails.default?.url;
+
+                // Remove old videos from this channel
+                videos = videos.filter(v => v.channelId !== channelId);
+
+                // Add all videos from channel
+                let addedCount = 0;
+                videosData.items.forEach(item => {
+                    const videoId = item.snippet.resourceId.videoId;
+
+                    videos.push({
+                        id: videoId,
+                        title: item.snippet.title,
+                        channelName: channelName,
+                        channelId: channelId,
+                        channelThumbnail: channelThumbnail,
+                        addedAt: new Date().toISOString()
+                    });
+                    addedCount++;
+                });
+
+                saveVideos();
+                renderChannels();
+                showMessage(`Refreshed ${channelName}! Now showing ${addedCount} videos 🎉`, 'success');
+
+            } catch (error) {
+                console.error('Reimport error:', error);
+                showMessage(`Error refreshing channel: ${error.message}`, 'error');
             }
         }
 
