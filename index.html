@@ -5,104 +5,827 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <title>Video Library</title>
+    <title>Kids Video Library</title>
     <style>
-        body {
+        * {
             margin: 0;
-            padding: 20px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f0f0f0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
-        .channel-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            padding: 20px 0;
-        }
-        .channel-card {
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-decoration: none;
-            color: inherit;
-            transition: transform 0.2s;
-        }
-        .channel-card:hover {
-            transform: translateY(-5px);
-        }
-        .channel-thumbnail {
-            width: 100%;
-            aspect-ratio: 1;
-            object-fit: cover;
-            background: #f5f5f5;
-        }
-        .channel-info {
-            padding: 15px;
+
+        header {
             text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            position: relative;
         }
+
         h1 {
-            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .admin-trigger {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .admin-trigger:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        .channels-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .channel-filter {
+            padding: 10px 20px;
+            background: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .channel-filter:hover,
+        .channel-filter.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .video-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            background: #f0f0f0;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .video-info {
+            padding: 15px;
+        }
+
+        .video-title {
+            font-size: 1.1em;
+            font-weight: 600;
             color: #333;
+            margin-bottom: 5px;
+        }
+
+        .video-channel {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,59,48,0.9);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .admin-mode .delete-btn {
+            display: flex;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255,59,48,1);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
             margin-bottom: 20px;
         }
-        h2 {
-            margin: 0;
-            font-size: 1.2em;
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
             color: #333;
         }
-        .video-count {
-            color: #666;
-            margin-top: 5px;
-            font-size: 0.9em;
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-success {
+            background: #34c759;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ff3b30;
+            color: white;
+        }
+
+        /* Admin Panel */
+        .admin-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: none;
+        }
+
+        .admin-mode .admin-panel {
+            display: block;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .admin-header h2 {
+            color: #667eea;
+        }
+
+        .admin-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .admin-btn {
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .admin-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .math-challenge {
+            text-align: center;
+            font-size: 1.5em;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .message.success {
+            background: #d1f2eb;
+            color: #00875a;
+        }
+
+        .message.error {
+            background: #ffebe6;
+            color: #de350b;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+
+        .empty-state h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-actions {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Video Channels</h1>
-        <div class="channel-grid">
-            
-                <a href="diggers-tv.html" class="channel-card">
-                    <img src="https://yt3.ggpht.com/Y8w_AlTGxM9bERGI_xcVBZTrNLQoC6PRM5aWPiZfiL8CrLNge5h4961WC8Z1YYmABzsPs8tVIA=s240-c-k-c0x00ffffff-no-rj" alt="Diggers TV" class="channel-thumbnail">
-                    <div class="channel-info">
-                        <h2>Diggers TV</h2>
-                        <div class="video-count">20 videos</div>
-                    </div>
-                </a>
-            
-            
-                <a href="blippi-educational-videos-for-kids.html" class="channel-card">
-                    <img src="https://yt3.ggpht.com/fz5hWugHvgyHtNmAKchGjaaIZzDuRTUKTxZIgxESfIVGwZTNaf2sSayzpwsxNJs_7V8zKiUOMPc=s240-c-k-c0x00ffffff-no-rj" alt="Blippi - Educational Videos for Kids" class="channel-thumbnail">
-                    <div class="channel-info">
-                        <h2>Blippi - Educational Videos for Kids</h2>
-                        <div class="video-count">20 videos</div>
-                    </div>
-                </a>
-            
-            
-                <a href="bluey-official-channel.html" class="channel-card">
-                    <img src="https://yt3.ggpht.com/ntD3FiuQNxb-dxWlbzZoqn1M5WtyMjkhoUaG63_vrsTEVtfAqhmF4RyfrSIBJb7gGG7_S9jSAA=s240-c-k-c0x00ffffff-no-rj" alt="Bluey - Official Channel" class="channel-thumbnail">
-                    <div class="channel-info">
-                        <h2>Bluey - Official Channel</h2>
-                        <div class="video-count">20 videos</div>
-                    </div>
-                </a>
-            
-            
-                <a href="peppa-pig-official-channel.html" class="channel-card">
-                    <img src="https://yt3.ggpht.com/Opn980atmV-97jOBdavlmJeMBgSZ4nihxMrZSNFl0hDh1_WZYHn_PhySFxXs5JxukGpK8U1RZnI=s240-c-k-c0x00ffffff-no-rj" alt="Peppa Pig - Official Channel" class="channel-thumbnail">
-                    <div class="channel-info">
-                        <h2>Peppa Pig - Official Channel</h2>
-                        <div class="video-count">20 videos</div>
-                    </div>
-                </a>
-            
+        <header>
+            <h1>🎬 Video Library</h1>
+            <div class="admin-trigger" onclick="showMathChallenge()">⚙️</div>
+        </header>
+
+        <!-- Admin Panel -->
+        <div class="admin-panel">
+            <div class="admin-header">
+                <h2>Admin Mode</h2>
+                <button class="btn btn-secondary" onclick="exitAdminMode()">Exit Admin</button>
+            </div>
+            <div class="admin-actions">
+                <button class="admin-btn" onclick="showImportChannelModal()">📺 Import Channel</button>
+                <button class="admin-btn" onclick="showAddVideoModal()">➕ Add Video</button>
+                <button class="admin-btn" onclick="exportLibrary()">💾 Export Library</button>
+                <button class="admin-btn" onclick="importLibrary()">📁 Import Library</button>
+            </div>
+        </div>
+
+        <!-- Channel Filters -->
+        <div class="channels-nav" id="channelsNav"></div>
+
+        <!-- Video Grid -->
+        <div id="messageContainer"></div>
+        <div class="video-grid" id="videoGrid"></div>
+    </div>
+
+    <!-- Math Challenge Modal -->
+    <div class="modal" id="mathModal">
+        <div class="modal-content">
+            <h2>Math Challenge 🧮</h2>
+            <div class="math-challenge" id="mathQuestion"></div>
+            <div class="form-group">
+                <input type="number" id="mathAnswer" placeholder="Your answer" autofocus>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="closeMathChallenge()">Cancel</button>
+                <button class="btn btn-primary" onclick="checkMathAnswer()">Submit</button>
+            </div>
         </div>
     </div>
+
+    <!-- Import Channel Modal -->
+    <div class="modal" id="importChannelModal">
+        <div class="modal-content">
+            <h2>Import YouTube Channel</h2>
+            <div class="form-group">
+                <label>Channel ID</label>
+                <input type="text" id="channelIdInput" placeholder="UCxxxxxxxYYYYYYYzzzzzzz">
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    Example: UCVzLLZkDuFGAE2BGdBuBNBg (Bluey)
+                </small>
+            </div>
+            <div id="importMessage"></div>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="closeModal('importChannelModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="importChannel()">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Video Modal -->
+    <div class="modal" id="addVideoModal">
+        <div class="modal-content">
+            <h2>Add Video</h2>
+            <div class="form-group">
+                <label>YouTube URL or Video ID</label>
+                <input type="text" id="videoUrlInput" placeholder="https://youtube.com/watch?v=...">
+            </div>
+            <div class="form-group">
+                <label>Video Title</label>
+                <input type="text" id="videoTitleInput" placeholder="Enter video title">
+            </div>
+            <div class="form-group">
+                <label>Channel Name</label>
+                <input type="text" id="videoChannelInput" placeholder="Channel name">
+            </div>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="closeModal('addVideoModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addVideo()">Add Video</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for import -->
+    <input type="file" id="importFileInput" accept=".json" style="display: none" onchange="handleFileImport(event)">
+
+    <script>
+        // Configuration
+        const STORAGE_KEY = 'kidsVideoLibrary';
+        const YOUTUBE_API_KEY = 'AIzaSyD9rquZqibksu9TZmm9HnUSfL9KT8Ab8MU'; // Your YouTube API key
+
+        // State
+        let videos = [];
+        let isAdminMode = false;
+        let currentFilter = 'all';
+        let mathAnswer = 0;
+
+        // Initialize
+        window.onload = function() {
+            loadVideos();
+            renderVideos();
+            renderChannelFilters();
+        };
+
+        // Math Challenge
+        function showMathChallenge() {
+            const num1 = Math.floor(Math.random() * 10) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            const operations = ['+', '-', '×'];
+            const operation = operations[Math.floor(Math.random() * operations.length)];
+
+            let question, answer;
+            switch(operation) {
+                case '+':
+                    question = `What is ${num1} + ${num2}?`;
+                    answer = num1 + num2;
+                    break;
+                case '-':
+                    question = `What is ${num1 + num2} - ${num2}?`;
+                    answer = num1;
+                    break;
+                case '×':
+                    question = `What is ${num1} × ${num2}?`;
+                    answer = num1 * num2;
+                    break;
+            }
+
+            mathAnswer = answer;
+            document.getElementById('mathQuestion').textContent = question;
+            document.getElementById('mathAnswer').value = '';
+            openModal('mathModal');
+
+            // Allow Enter key to submit
+            document.getElementById('mathAnswer').onkeypress = function(e) {
+                if (e.key === 'Enter') checkMathAnswer();
+            };
+        }
+
+        function checkMathAnswer() {
+            const userAnswer = parseInt(document.getElementById('mathAnswer').value);
+            if (userAnswer === mathAnswer) {
+                isAdminMode = true;
+                document.body.classList.add('admin-mode');
+                closeModal('mathModal');
+                showMessage('Admin mode activated! 🎉', 'success');
+            } else {
+                showMessage('Incorrect answer. Try again!', 'error');
+                setTimeout(() => closeMathChallenge(), 1500);
+            }
+        }
+
+        function closeMathChallenge() {
+            closeModal('mathModal');
+        }
+
+        function exitAdminMode() {
+            isAdminMode = false;
+            document.body.classList.remove('admin-mode');
+            showMessage('Exited admin mode', 'success');
+        }
+
+        // Video Management
+        function loadVideos() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            videos = saved ? JSON.parse(saved) : [];
+        }
+
+        function saveVideos() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
+        }
+
+
+        function renderVideos() {
+            const grid = document.getElementById('videoGrid');
+            const filteredVideos = currentFilter === 'all'
+                ? videos
+                : videos.filter(v => v.channelName === currentFilter);
+
+            if (filteredVideos.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No videos yet!</h2>
+                        <p>Click the ⚙️ button to add videos</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filteredVideos.map((video, index) => `
+                <div class="video-card">
+                    <button class="delete-btn" onclick="deleteVideo('${video.id}')" title="Delete">×</button>
+                    <div class="video-container">
+                        <iframe
+                            src="https://www.youtube.com/embed/${video.id}?rel=0&modestbranding=1&showinfo=0&iv_load_policy=3&fs=1&playsinline=1"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen
+                            loading="lazy"
+                            title="${escapeHtml(video.title)}">
+                        </iframe>
+                    </div>
+                    <div class="video-info">
+                        <div class="video-title">${escapeHtml(video.title)}</div>
+                        <div class="video-channel">${escapeHtml(video.channelName || 'Uncategorized')}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderChannelFilters() {
+            const channels = ['all', ...new Set(videos.map(v => v.channelName).filter(Boolean))];
+            const nav = document.getElementById('channelsNav');
+
+            if (channels.length <= 1) {
+                nav.innerHTML = '';
+                return;
+            }
+
+            nav.innerHTML = channels.map(channel => `
+                <button
+                    class="channel-filter ${currentFilter === channel ? 'active' : ''}"
+                    onclick="filterByChannel('${channel}')">
+                    ${channel === 'all' ? '📺 All Videos' : escapeHtml(channel)}
+                </button>
+            `).join('');
+        }
+
+        function filterByChannel(channel) {
+            currentFilter = channel;
+            renderVideos();
+            renderChannelFilters();
+        }
+
+        function deleteVideo(videoId) {
+            if (!confirm('Delete this video?')) return;
+
+            videos = videos.filter(v => v.id !== videoId);
+            saveVideos();
+            renderVideos();
+            renderChannelFilters();
+            showMessage('Video deleted', 'success');
+        }
+
+        function addVideo() {
+            const url = document.getElementById('videoUrlInput').value.trim();
+            const title = document.getElementById('videoTitleInput').value.trim();
+            const channel = document.getElementById('videoChannelInput').value.trim() || 'My Videos';
+
+            if (!url || !title) {
+                showMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            const videoId = extractVideoId(url);
+            if (!videoId) {
+                showMessage('Invalid YouTube URL or video ID', 'error');
+                return;
+            }
+
+            videos.push({
+                id: videoId,
+                title: title,
+                channelName: channel,
+                addedAt: new Date().toISOString()
+            });
+
+            saveVideos();
+            renderVideos();
+            renderChannelFilters();
+            closeModal('addVideoModal');
+            showMessage('Video added successfully! 🎉', 'success');
+
+            // Clear form
+            document.getElementById('videoUrlInput').value = '';
+            document.getElementById('videoTitleInput').value = '';
+            document.getElementById('videoChannelInput').value = '';
+        }
+
+        async function importChannel() {
+            const channelId = document.getElementById('channelIdInput').value.trim();
+            const messageEl = document.getElementById('importMessage');
+
+            if (!channelId) {
+                messageEl.innerHTML = '<div class="message error">Please enter a Channel ID</div>';
+                return;
+            }
+
+            messageEl.innerHTML = '<div class="loading">Importing videos...</div>';
+
+            try {
+                // Get channel info
+                const channelResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&id=${channelId}&key=${YOUTUBE_API_KEY}`
+                );
+                const channelData = await channelResponse.json();
+
+                if (!channelData.items || channelData.items.length === 0) {
+                    throw new Error('Channel not found');
+                }
+
+                const channelName = channelData.items[0].snippet.title;
+                const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
+
+                // Get videos from uploads playlist
+                const videosResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${YOUTUBE_API_KEY}`
+                );
+                const videosData = await videosResponse.json();
+
+                if (!videosData.items) {
+                    throw new Error('No videos found');
+                }
+
+                // Add videos
+                let addedCount = 0;
+                videosData.items.forEach(item => {
+                    const videoId = item.snippet.resourceId.videoId;
+                    // Skip if already exists
+                    if (videos.find(v => v.id === videoId)) return;
+
+                    videos.push({
+                        id: videoId,
+                        title: item.snippet.title,
+                        channelName: channelName,
+                        addedAt: new Date().toISOString()
+                    });
+                    addedCount++;
+                });
+
+                saveVideos();
+                renderVideos();
+                renderChannelFilters();
+                closeModal('importChannelModal');
+                showMessage(`Successfully imported ${addedCount} videos from ${channelName}! 🎉`, 'success');
+
+            } catch (error) {
+                console.error('Import error:', error);
+                messageEl.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function exportLibrary() {
+            const dataStr = JSON.stringify(videos, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `video-library-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            showMessage('Library exported successfully! 💾', 'success');
+        }
+
+        function importLibrary() {
+            document.getElementById('importFileInput').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedVideos = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedVideos)) {
+                        throw new Error('Invalid file format');
+                    }
+
+                    const confirmMsg = `Import ${importedVideos.length} videos? This will merge with your existing library.`;
+                    if (!confirm(confirmMsg)) return;
+
+                    // Merge videos, avoiding duplicates
+                    importedVideos.forEach(video => {
+                        if (!videos.find(v => v.id === video.id)) {
+                            videos.push(video);
+                        }
+                    });
+
+                    saveVideos();
+                    renderVideos();
+                    renderChannelFilters();
+                    showMessage(`Successfully imported ${importedVideos.length} videos! 🎉`, 'success');
+
+                } catch (error) {
+                    showMessage('Error importing file: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        // Utilities
+        function extractVideoId(url) {
+            // If it's already an ID (11 characters)
+            if (url.length === 11 && /^[a-zA-Z0-9_-]+$/.test(url)) {
+                return url;
+            }
+
+            // Extract from URL
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showMessage(text, type) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }
+
+        // Modal Management
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function showImportChannelModal() {
+            openModal('importChannelModal');
+            document.getElementById('importMessage').innerHTML = '';
+        }
+
+        function showAddVideoModal() {
+            openModal('addVideoModal');
+        }
+
+        // Close modals on outside click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeModal(modal.id);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
